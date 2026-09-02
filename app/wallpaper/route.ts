@@ -137,8 +137,25 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const text = String(body.text || "");
+    const allWords = parseLines(text);
 
-    const words = parseLines(text).slice(0, 20);
+    if (allWords.length === 0) {
+      return Response.json(
+        { error: "No vocabulary words found" },
+        { status: 400 }
+      );
+    }
+
+    const requestedStart = Number(body.start || 1);
+    const startIndex =
+      Number.isFinite(requestedStart)
+        ? ((Math.floor(requestedStart) - 1) % allWords.length + allWords.length) % allWords.length
+        : 0;
+
+    const words = Array.from(
+      { length: 20 },
+      (_, i) => allWords[(startIndex + i) % allWords.length]
+    );
 
     const left = words.slice(0, 10);
     const right = words.slice(10, 20);
