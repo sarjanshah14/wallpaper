@@ -1,14 +1,20 @@
 import sharp from "sharp";
 import { openSync } from "fontkit";
-import fs from "fs";
 import path from "path";
 import { NextRequest } from "next/server";
 
 const WIDTH = 1179;
 const HEIGHT = 2556;
 
-const fontPath = path.join(process.cwd(), "fonts", "Arial.ttf");
-const font = openSync(fontPath) as import("fontkit").Font;
+const boldFontPath = path.join(
+  process.cwd(),
+  "fonts",
+  "Arial-Bold.ttf"
+);
+
+const boldFont = openSync(
+  boldFontPath
+) as import("fontkit").Font;
 
 function parseLines(text: string) {
   return text
@@ -20,7 +26,10 @@ function parseLines(text: string) {
       const separator = line.indexOf("=");
 
       if (separator === -1) {
-        return { word: line, meaning: "" };
+        return {
+          word: line,
+          meaning: "",
+        };
       }
 
       return {
@@ -30,51 +39,66 @@ function parseLines(text: string) {
     });
 }
 
-function escapeXml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-function textWidth(text: string, size: number) {
+function getTextWidth(text: string, size: number) {
   if (!text) return 0;
 
-  const run = font.layout(text);
+  const run = boldFont.layout(text);
 
-  return run.positions.reduce(
-    (total, position) => total + position.xAdvance,
-    0
-  ) * (size / font.unitsPerEm);
+  return (
+    run.positions.reduce(
+      (total, position) => total + position.xAdvance,
+      0
+    ) *
+    (size / boldFont.unitsPerEm)
+  );
+}
+
+function fitText(
+  text: string,
+  maxWidth: number,
+  size: number
+) {
+  if (!text) return "";
+
+  if (getTextWidth(text, size) <= maxWidth) {
+    return text;
+  }
+
+  let result = text;
+
+  while (
+    result.length > 1 &&
+    getTextWidth(result + "...", size) > maxWidth
+  ) {
+    result = result.slice(0, -1);
+  }
+
+  return result + "...";
 }
 
 function textToPath(
   text: string,
   x: number,
   baselineY: number,
-  size: number,
-  fill: string
+  size: number
 ) {
   if (!text) return "";
 
-  const run = font.layout(text);
-  const scale = size / font.unitsPerEm;
+  const run = boldFont.layout(text);
+  const scale = size / boldFont.unitsPerEm;
 
   let cursorX = x;
 
   return run.glyphs
     .map((glyph, index) => {
       const position = run.positions[index];
-
       const pathData = glyph.path.toSVG();
 
       const result = `
         <path
           d="${pathData}"
           transform="translate(${cursorX} ${baselineY}) scale(${scale} ${-scale})"
-          fill="${fill}"
+          fill="#000000"
         />
       `;
 
@@ -85,23 +109,28 @@ function textToPath(
     .join("");
 }
 
-function fitText(text: string, maxWidth: number, size: number) {
-  if (!text) return "";
+function renderColumn(
+  items: { word: string; meaning: string }[],
+  x: number
+) {
+  return items
+    .map((item, i) => {
+      const y = 700 + i * 170;
 
-  if (textWidth(text, size) <= maxWidth) {
-    return text;
-  }
+      const word = fitText(item.word, 490, 46);
+      const meaning = fitText(item.meaning, 490, 36);
 
-  let result = text;
+      return `
+        ${textToPath(word, x, y, 46)}
 
-  while (
-    result.length > 1 &&
-    textWidth(result + "...", size) > maxWidth
-  ) {
-    result = result.slice(0, -1);
-  }
-
-  return result + "...";
+        ${
+          meaning
+            ? textToPath(meaning, x, y + 60, 36)
+            : ""
+        }
+      `;
+    })
+    .join("");
 }
 
 export async function POST(request: NextRequest) {
@@ -114,35 +143,6 @@ export async function POST(request: NextRequest) {
     const left = words.slice(0, 10);
     const right = words.slice(10, 20);
 
-    const renderColumn = (
-      items: { word: string; meaning: string }[],
-      x: number
-    ) =>
-      items
-        .map((item, i) => {
-          const y = 760 + i * 170;
-
-          const word = fitText(item.word, 490, 32);
-          const meaning = fitText(item.meaning, 490, 28);
-
-          return `
-            ${textToPath(word, x, y, 32, "#FFFFFF")}
-
-            ${meaning
-              ? textToPath(meaning, x, y + 50, 28, "#B8B8B8")
-              : ""}
-          `;
-        })
-        .join("");
-
-    const title = "GRE VOCABULARY";
-    const titleSize = 30;
-    const titleWidth = textWidth(title, titleSize);
-
-    const count = `${words.length} WORDS`;
-    const countSize = 22;
-    const countWidth = textWidth(count, countSize);
-
     const svg = `
       <svg
         width="${WIDTH}"
@@ -153,31 +153,17 @@ export async function POST(request: NextRequest) {
         <rect
           width="${WIDTH}"
           height="${HEIGHT}"
-          fill="#111111"
+          fill="#FFFFFF"
         />
-
-        ${textToPath(
-          title,
-          (WIDTH - titleWidth) / 2,
-          635,
-          titleSize,
-          "#FFFFFF"
-        )}
-
-        ${textToPath(
-          count,
-          (WIDTH - countWidth) / 2,
-          680,
-          countSize,
-          "#777777"
-        )}
 
         ${renderColumn(left, 70)}
         ${renderColumn(right, 615)}
       </svg>
     `;
 
-    const png = await sharp(Buffer.from(svg))
+    const png = await sharp(
+      Buffer.from(svg)
+    )
       .png()
       .toBuffer();
 
