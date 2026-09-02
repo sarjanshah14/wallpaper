@@ -1,8 +1,13 @@
 import sharp from "sharp";
 import { NextRequest } from "next/server";
+import fs from "fs";
+import path from "path";
 
 const WIDTH = 1179;
 const HEIGHT = 2556;
+
+const fontPath = path.join(process.cwd(), "fonts", "Arial.ttf");
+const fontBase64 = fs.readFileSync(fontPath).toString("base64");
 
 function parseLines(text: string) {
   return text
@@ -39,7 +44,6 @@ function escapeXml(value: string) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-
     const text = String(body.text || "");
 
     const words = parseLines(text).slice(0, 20);
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
             <text
               x="${x}"
               y="${y}"
-              font-family="sans-serif"
+              font-family="GREFont"
               font-size="32"
               font-weight="700"
               fill="#FFFFFF"
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
             <text
               x="${x}"
               y="${y + 50}"
-              font-family="sans-serif"
+              font-family="GREFont"
               font-size="28"
               fill="#B8B8B8"
             >${escapeXml(item.meaning)}</text>
@@ -89,6 +93,15 @@ export async function POST(request: NextRequest) {
         viewBox="0 0 ${WIDTH} ${HEIGHT}"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <defs>
+          <style>
+            @font-face {
+              font-family: "GREFont";
+              src: url("data:font/ttf;base64,${fontBase64}");
+            }
+          </style>
+        </defs>
+
         <rect
           width="${WIDTH}"
           height="${HEIGHT}"
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest) {
           x="589.5"
           y="635"
           text-anchor="middle"
-          font-family="sans-serif"
+          font-family="GREFont"
           font-size="30"
           font-weight="700"
           fill="#FFFFFF"
@@ -109,7 +122,7 @@ export async function POST(request: NextRequest) {
           x="589.5"
           y="680"
           text-anchor="middle"
-          font-family="sans-serif"
+          font-family="GREFont"
           font-size="22"
           fill="#777777"
         >${words.length} WORDS</text>
@@ -119,7 +132,9 @@ export async function POST(request: NextRequest) {
       </svg>
     `;
 
-    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+    const png = await sharp(Buffer.from(svg))
+      .png()
+      .toBuffer();
 
     return new Response(png, {
       headers: {
