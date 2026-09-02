@@ -8,7 +8,7 @@ const WIDTH = 1179;
 const HEIGHT = 2556;
 
 const fontPath = path.join(process.cwd(), "fonts", "Arial.ttf");
-const font = openSync(fontPath);
+const font = openSync(fontPath) as import("fontkit").Font;
 
 function parseLines(text: string) {
   return text

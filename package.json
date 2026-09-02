@@ -17,6 +17,7 @@
     "sharp": "^0.35.4"
   },
   "devDependencies": {
+    "@types/fontkit": "^2.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
