@@ -40,15 +40,64 @@ function escapeXml(value: string) {
 }
 
 function textWidth(text: string, size: number) {
-  return font.layout(text).advanceWidth * (size / font.unitsPerEm);
+  if (!text) return 0;
+
+  const run = font.layout(text);
+
+  return run.positions.reduce(
+    (total, position) => total + position.xAdvance,
+    0
+  ) * (size / font.unitsPerEm);
+}
+
+function textToPath(
+  text: string,
+  x: number,
+  baselineY: number,
+  size: number,
+  fill: string
+) {
+  if (!text) return "";
+
+  const run = font.layout(text);
+  const scale = size / font.unitsPerEm;
+
+  let cursorX = x;
+
+  return run.glyphs
+    .map((glyph, index) => {
+      const position = run.positions[index];
+
+      const pathData = glyph.path.toSVG();
+
+      const result = `
+        <path
+          d="${pathData}"
+          transform="translate(${cursorX} ${baselineY}) scale(${scale} ${-scale})"
+          fill="${fill}"
+        />
+      `;
+
+      cursorX += position.xAdvance * scale;
+
+      return result;
+    })
+    .join("");
 }
 
 function fitText(text: string, maxWidth: number, size: number) {
-  if (textWidth(text, size) <= maxWidth) return text;
+  if (!text) return "";
+
+  if (textWidth(text, size) <= maxWidth) {
+    return text;
+  }
 
   let result = text;
 
-  while (result.length > 1 && textWidth(result + "...", size) > maxWidth) {
+  while (
+    result.length > 1 &&
+    textWidth(result + "...", size) > maxWidth
+  ) {
     result = result.slice(0, -1);
   }
 
@@ -72,35 +121,27 @@ export async function POST(request: NextRequest) {
       items
         .map((item, i) => {
           const y = 760 + i * 170;
+
           const word = fitText(item.word, 490, 32);
           const meaning = fitText(item.meaning, 490, 28);
 
           return `
-            <text
-              x="${x}"
-              y="${y}"
-              font-family="Arial"
-              font-size="32"
-              font-weight="700"
-              fill="#FFFFFF"
-            >${escapeXml(word)}</text>
+            ${textToPath(word, x, y, 32, "#FFFFFF")}
 
-            ${
-              meaning
-                ? `
-            <text
-              x="${x}"
-              y="${y + 50}"
-              font-family="Arial"
-              font-size="28"
-              fill="#B8B8B8"
-            >${escapeXml(meaning)}</text>
-            `
-                : ""
-            }
+            ${meaning
+              ? textToPath(meaning, x, y + 50, 28, "#B8B8B8")
+              : ""}
           `;
         })
         .join("");
+
+    const title = "GRE VOCABULARY";
+    const titleSize = 30;
+    const titleWidth = textWidth(title, titleSize);
+
+    const count = `${words.length} WORDS`;
+    const countSize = 22;
+    const countWidth = textWidth(count, countSize);
 
     const svg = `
       <svg
@@ -109,26 +150,27 @@ export async function POST(request: NextRequest) {
         viewBox="0 0 ${WIDTH} ${HEIGHT}"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect width="${WIDTH}" height="${HEIGHT}" fill="#111111"/>
+        <rect
+          width="${WIDTH}"
+          height="${HEIGHT}"
+          fill="#111111"
+        />
 
-        <text
-          x="589.5"
-          y="635"
-          text-anchor="middle"
-          font-family="Arial"
-          font-size="30"
-          font-weight="700"
-          fill="#FFFFFF"
-        >GRE VOCABULARY</text>
+        ${textToPath(
+          title,
+          (WIDTH - titleWidth) / 2,
+          635,
+          titleSize,
+          "#FFFFFF"
+        )}
 
-        <text
-          x="589.5"
-          y="680"
-          text-anchor="middle"
-          font-family="Arial"
-          font-size="22"
-          fill="#777777"
-        >${words.length} WORDS</text>
+        ${textToPath(
+          count,
+          (WIDTH - countWidth) / 2,
+          680,
+          countSize,
+          "#777777"
+        )}
 
         ${renderColumn(left, 70)}
         ${renderColumn(right, 615)}
