@@ -76,6 +76,64 @@ function fitText(
   return result + "...";
 }
 
+function wrapText(
+  text: string,
+  maxWidth: number,
+  size: number,
+  maxLines = 2
+) {
+  if (!text) return [];
+
+  const words = text.trim().split(/\s+/);
+  const lines: string[] = [];
+
+  let current = "";
+  let wordIndex = 0;
+
+  while (wordIndex < words.length) {
+    const test = current
+      ? `${current} ${words[wordIndex]}`
+      : words[wordIndex];
+
+    if (getTextWidth(test, size) <= maxWidth) {
+      current = test;
+      wordIndex++;
+      continue;
+    }
+
+    if (current) {
+      lines.push(current);
+      current = "";
+    } else {
+      lines.push(fitText(words[wordIndex], maxWidth, size));
+      wordIndex++;
+    }
+
+    if (lines.length === maxLines) {
+      break;
+    }
+  }
+
+  if (current && lines.length < maxLines) {
+    lines.push(current);
+  }
+
+  if (wordIndex < words.length && lines.length > 0) {
+    let last = lines[lines.length - 1];
+
+    while (
+      last.length > 0 &&
+      getTextWidth(last + "...", size) > maxWidth
+    ) {
+      last = last.slice(0, -1);
+    }
+
+    lines[lines.length - 1] = last + "...";
+  }
+
+  return lines;
+}
+
 function textToPath(
   text: string,
   x: number,
@@ -118,16 +176,25 @@ function renderColumn(
       const y = 700 + i * 170;
 
       const word = fitText(item.word, 490, 46);
-      const meaning = fitText(item.meaning, 490, 36);
+      const meaningLines = wrapText(
+        item.meaning,
+        490,
+        36,
+        2
+      );
 
       return `
         ${textToPath(word, x, y, 46)}
-
-        ${
-          meaning
-            ? textToPath(meaning, x, y + 60, 36)
-            : ""
-        }
+        ${meaningLines
+          .map((line, index) =>
+            textToPath(
+              line,
+              x,
+              y + 60 + index * 40,
+              36
+            )
+          )
+          .join("")}
       `;
     })
     .join("");
