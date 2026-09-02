@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
             <text
               x="${x}"
               y="${y}"
-              font-family="Arial, Helvetica, sans-serif"
+              font-family="sans-serif"
               font-size="32"
               font-weight="700"
               fill="#FFFFFF"
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             <text
               x="${x}"
               y="${y + 50}"
-              font-family="Arial, Helvetica, sans-serif"
+              font-family="sans-serif"
               font-size="28"
               fill="#B8B8B8"
             >${escapeXml(item.meaning)}</text>
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           x="589.5"
           y="635"
           text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif"
+          font-family="sans-serif"
           font-size="30"
           font-weight="700"
           fill="#FFFFFF"
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
           x="589.5"
           y="680"
           text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif"
+          font-family="sans-serif"
           font-size="22"
           fill="#777777"
         >${words.length} WORDS</text>
