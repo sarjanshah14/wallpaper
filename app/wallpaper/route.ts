@@ -21,7 +21,7 @@ function parseLines(text: string) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .filter((line) => line.toLowerCase() !== "new words")
+    .filter((line) => {      const lower = line.toLowerCase();      return lower !== "new words" && lower !== "sentence equivalence";    })
     .map((line) => {
       const separator = line.indexOf("=");
 
@@ -200,6 +200,41 @@ function renderColumn(
     .join("");
 }
 
+function renderSentenceColumn(
+  items: { word: string; meaning: string }[]
+) {
+  const columnX = 280;
+
+  return items
+    .map((item, i) => {
+      const y = 600 + i * 120;
+
+      const word = fitText(item.word, 700, 38);
+
+      const meaningLines = wrapText(
+        item.meaning,
+        700,
+        30,
+        2
+      );
+
+      return `
+        ${textToPath(word, columnX, y, 38)}
+        ${meaningLines
+          .map((line, index) =>
+            textToPath(
+              line,
+              columnX,
+              y + 48 + index * 32,
+              30
+            )
+          )
+          .join("")}
+      `;
+    })
+    .join("");
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -219,13 +254,22 @@ export async function POST(request: NextRequest) {
         ? ((Math.floor(requestedStart) - 1) % allWords.length + allWords.length) % allWords.length
         : 0;
 
+    const mode = String(body.mode || "new");
+
+    const count = mode === "sentence" ? 15 : 20;
+
     const words = Array.from(
-      { length: 20 },
+      { length: count },
       (_, i) => allWords[(startIndex + i) % allWords.length]
     );
 
-    const left = words.slice(0, 10);
-    const right = words.slice(10, 20);
+    const svgContent =
+      mode === "sentence"
+        ? renderSentenceColumn(words)
+        : `
+            ${renderColumn(words.slice(0, 10), 70)}
+            ${renderColumn(words.slice(10, 20), 615)}
+          `;
 
     const svg = `
       <svg
@@ -240,8 +284,7 @@ export async function POST(request: NextRequest) {
           fill="#FFFFFF"
         />
 
-        ${renderColumn(left, 70)}
-        ${renderColumn(right, 615)}
+        ${svgContent}
       </svg>
     `;
 
