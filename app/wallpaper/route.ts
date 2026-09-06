@@ -207,7 +207,7 @@ function renderSentenceColumn(
 
   return items
     .map((item, i) => {
-      const y = 600 + i * 160;
+      const y = 760 + i * 160;
 
       const word = fitText(item.word, 700, 46);
 
