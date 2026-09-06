@@ -207,19 +207,19 @@ function renderSentenceColumn(
 
   return items
     .map((item, i) => {
-      const y = 600 + i * 120;
+      const y = 600 + i * 160;
 
-      const word = fitText(item.word, 700, 38);
+      const word = fitText(item.word, 700, 46);
 
       const meaningLines = wrapText(
         item.meaning,
         700,
-        30,
+        36,
         2
       );
 
       return `
-        ${textToPath(word, columnX, y, 38)}
+        ${textToPath(word, columnX, y, 46)}
         ${meaningLines
           .map((line, index) =>
             textToPath(
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
 
     const mode = String(body.mode || "new");
 
-    const count = mode === "sentence" ? 15 : 20;
+    const count = mode === "sentence" ? 10 : 20;
 
     const words = Array.from(
       { length: count },
